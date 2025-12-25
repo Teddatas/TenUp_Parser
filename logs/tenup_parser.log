@@ -1,0 +1,50 @@
+2025-12-25 17:43:53,781 - __main__ - INFO - ==================================================
+2025-12-25 17:43:53,781 - __main__ - INFO - 🎾 TenUp Parser - Démarrage
+2025-12-25 17:43:53,781 - __main__ - INFO - ==================================================
+2025-12-25 17:43:53,781 - src.parser - INFO - 🎾 Ouverture du PDF : data/input/tenup.pdf
+2025-12-25 17:43:53,793 - src.parser - INFO - 📄 29 pages à traiter
+2025-12-25 17:44:01,197 - src.parser - INFO - ✓ 200 tournoi(s) extrait(s)
+2025-12-25 17:44:01,202 - src.csv_exporter - INFO - ✓ 453 ligne(s) exportée(s) vers /Users/teddy/Desktop/Projets/Github/TenUp_Parser/data/output/tournaments.csv
+2025-12-25 17:44:01,203 - __main__ - INFO - ==================================================
+2025-12-25 17:44:01,203 - __main__ - INFO - ✓ Parsing terminé avec succès
+2025-12-25 17:44:01,203 - __main__ - INFO - ==================================================
+2025-12-25 17:48:38,661 - __main__ - INFO - ==================================================
+2025-12-25 17:48:38,661 - __main__ - INFO - 🎾 TenUp Parser - Démarrage
+2025-12-25 17:48:38,661 - __main__ - INFO - ==================================================
+2025-12-25 17:48:38,661 - src.parser - INFO - 🎾 Ouverture du PDF : data/input/tenup.pdf
+2025-12-25 17:48:38,682 - src.parser - INFO - 📄 29 pages à traiter
+2025-12-25 17:48:47,628 - src.parser - INFO - ✓ 220 tournoi(s) extrait(s)
+2025-12-25 17:48:47,635 - src.csv_exporter - INFO - ✓ 554 ligne(s) exportée(s) vers data/output/test_output.csv
+2025-12-25 17:48:47,635 - __main__ - INFO - ==================================================
+2025-12-25 17:48:47,635 - __main__ - INFO - ✓ Parsing terminé avec succès
+2025-12-25 17:48:47,636 - __main__ - INFO - ==================================================
+2025-12-25 17:48:50,882 - __main__ - INFO - ==================================================
+2025-12-25 17:48:50,882 - __main__ - INFO - 🎾 TenUp Parser - Démarrage
+2025-12-25 17:48:50,882 - __main__ - INFO - ==================================================
+2025-12-25 17:48:50,882 - src.parser - INFO - 🎾 Ouverture du PDF : data/input/tenup.pdf
+2025-12-25 17:48:50,894 - src.parser - INFO - 📄 29 pages à traiter
+2025-12-25 17:48:59,702 - src.parser - INFO - ✓ 220 tournoi(s) extrait(s)
+2025-12-25 17:48:59,708 - src.csv_exporter - INFO - ✓ 554 ligne(s) exportée(s) vers data/output/test_output.csv
+2025-12-25 17:48:59,708 - __main__ - INFO - ==================================================
+2025-12-25 17:48:59,708 - __main__ - INFO - ✓ Parsing terminé avec succès
+2025-12-25 17:48:59,708 - __main__ - INFO - ==================================================
+2025-12-25 17:53:11,283 - __main__ - INFO - ==================================================
+2025-12-25 17:53:11,283 - __main__ - INFO - 🎾 TenUp Parser - Démarrage
+2025-12-25 17:53:11,283 - __main__ - INFO - ==================================================
+2025-12-25 17:53:11,283 - src.parser - INFO - 🎾 Ouverture du PDF : data/input/tenup.pdf
+2025-12-25 17:53:11,295 - src.parser - INFO - 📄 29 pages à traiter
+2025-12-25 17:53:20,150 - src.parser - INFO - ✓ 220 tournoi(s) extrait(s)
+2025-12-25 17:53:20,156 - src.csv_exporter - INFO - ✓ 554 ligne(s) exportée(s) vers data/output/test_output_clean.csv
+2025-12-25 17:53:20,157 - __main__ - INFO - ==================================================
+2025-12-25 17:53:20,157 - __main__ - INFO - ✓ Parsing terminé avec succès
+2025-12-25 17:53:20,157 - __main__ - INFO - ==================================================
+2025-12-25 17:57:39,300 - __main__ - INFO - ==================================================
+2025-12-25 17:57:39,300 - __main__ - INFO - 🎾 TenUp Parser - Démarrage
+2025-12-25 17:57:39,300 - __main__ - INFO - ==================================================
+2025-12-25 17:57:39,300 - src.parser - INFO - 🎾 Ouverture du PDF : /Users/teddy/Desktop/Projets/Github/TenUp_Parser/data/input/tenup.pdf
+2025-12-25 17:57:39,312 - src.parser - INFO - 📄 29 pages à traiter
+2025-12-25 17:57:48,196 - src.parser - INFO - ✓ 220 tournoi(s) extrait(s)
+2025-12-25 17:57:48,202 - src.csv_exporter - INFO - ✓ 554 ligne(s) exportée(s) vers /Users/teddy/Desktop/Projets/Github/TenUp_Parser/data/output/tenup.csv
+2025-12-25 17:57:48,203 - __main__ - INFO - ==================================================
+2025-12-25 17:57:48,203 - __main__ - INFO - ✓ Parsing terminé avec succès
+2025-12-25 17:57:48,203 - __main__ - INFO - ==================================================
