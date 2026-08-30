@@ -1,0 +1,12 @@
+# Carte des tournois (branche feat/carte-tournois) — Python >= 3.10
+#   python -m venv .venv-carte && .venv-carte/bin/pip install -r requirements-carte.txt
+
+requests>=2.28
+python-dotenv>=1.0
+
+# Temps de trajet hors-ligne (vélo + transports en commun) — nécessite un JDK 21
+r5py>=1.0
+geopandas>=0.14
+shapely>=2.0
+
+# La carte est un template HTML autonome (Leaflet via CDN) — pas de dépendance Python.

@@ -56,3 +56,10 @@ Thumbs.db
 
 # Environment
 .env
+
+# Carte des tournois (feat/carte-tournois)
+data/cache/
+data/r5/
+data/output/*.html
+data/output/*.json
+.venv-carte/

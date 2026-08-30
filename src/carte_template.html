@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tournois de tennis — carte par temps de trajet</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  :root { --bg:#fff; --fg:#1a1a2e; --muted:#667; --line:#e3e3ec; --accent:#1a73e8; }
+  * { box-sizing:border-box; }
+  html,body { margin:0; height:100%; font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif; color:var(--fg); }
+  #app { display:flex; height:100%; }
+  #panel { width:300px; flex:none; background:var(--bg); border-right:1px solid var(--line);
+           padding:16px; overflow-y:auto; }
+  #map { flex:1; }
+  h1 { font-size:15px; margin:0 0 2px; }
+  .sub { color:var(--muted); font-size:12px; margin-bottom:14px; }
+  .field { margin-bottom:14px; }
+  .field > label { display:block; font-weight:600; font-size:12px; margin-bottom:5px;
+                   text-transform:uppercase; letter-spacing:.03em; color:var(--muted); }
+  .seg { display:flex; border:1px solid var(--line); border-radius:8px; overflow:hidden; }
+  .seg button { flex:1; border:0; background:var(--bg); padding:7px 4px; font:inherit; cursor:pointer; color:var(--muted); }
+  .seg button.on { background:var(--accent); color:#fff; font-weight:600; }
+  select, input[type=text] { width:100%; padding:7px 8px; border:1px solid var(--line); border-radius:8px; font:inherit; background:var(--bg); }
+  input[type=range] { width:100%; }
+  .rowval { display:flex; justify-content:space-between; font-size:12px; color:var(--muted); }
+  #count { font-weight:700; font-size:20px; }
+  .legend { display:flex; flex-direction:column; gap:3px; margin-top:6px; font-size:12px; }
+  .legend span { display:inline-block; width:14px; height:14px; border-radius:3px; margin-right:6px; vertical-align:-2px; }
+  .apply { width:100%; padding:8px; border:0; border-radius:8px; background:var(--accent); color:#fff; font:inherit; font-weight:600; cursor:pointer; }
+  .hint { font-size:11px; color:var(--muted); margin-top:5px; }
+  .leaflet-popup-content { font:13px/1.45 system-ui,sans-serif; }
+  .cta { display:block; margin-top:10px; padding:7px 10px; background:var(--accent); color:#fff !important;
+         text-align:center; border-radius:6px; text-decoration:none; font-weight:600; }
+  @media (max-width:720px){ #app{flex-direction:column;} #panel{width:100%;height:auto;max-height:46vh;} }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="panel">
+    <h1>Tournois de tennis</h1>
+    <div class="sub" id="meta"></div>
+
+    <div class="field">
+      <label>Je suis</label>
+      <div class="seg" data-seg="sexe">
+        <button data-v="H" class="on">Homme</button>
+        <button data-v="F">Femme</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Format</label>
+      <div class="seg" data-seg="format">
+        <button data-v="S" class="on">Simple</button>
+        <button data-v="D">Double</button>
+        <button data-v="*">Les deux</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Catégorie d'âge</label>
+      <select id="cat"></select>
+    </div>
+
+    <div class="field">
+      <label>Mon classement</label>
+      <select id="classement"></select>
+    </div>
+
+    <div class="field">
+      <label>Trajet</label>
+      <div class="seg" data-seg="mode">
+        <button data-v="best" class="on">Le + rapide</button>
+        <button data-v="velo">Vélo</button>
+        <button data-v="transit">Transports</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Temps de trajet max</label>
+      <input type="range" id="tmax" min="15" max="150" step="5" value="150">
+      <div class="rowval"><span>15 min</span><span id="tmaxval">illimité</span></div>
+    </div>
+
+    <div class="field">
+      <label>Débute dans les</label>
+      <input type="range" id="jours" min="7" max="120" step="1" value="120">
+      <div class="rowval"><span>7 j</span><span id="joursval">120 j</span></div>
+    </div>
+
+    <div class="field">
+      <div id="count">–</div>
+      <div class="sub">tournois affichés</div>
+      <div class="legend" id="legend"></div>
+    </div>
+
+    <div class="field">
+      <label>Adresse de départ</label>
+      <input type="text" id="adresse">
+      <button class="apply" id="regen">Recalculer les trajets</button>
+      <div class="hint" id="regenhint">Change le point de départ (relance le calcul, ~30 s).</div>
+    </div>
+  </div>
+  <div id="map"></div>
+</div>
+
+<script id="data" type="application/json">/*__DATA__*/</script>
+<script>
+const DATA = JSON.parse(document.getElementById('data').textContent);
+const P = DATA.parametres;
+document.getElementById('meta').textContent =
+  `Départ : ${P.depart.adresse} · rayon ${P.rayon_km} km · ${DATA.genere_le.slice(0,16).replace('T',' ')}`;
+document.getElementById('adresse').value = P.depart.adresse;
+
+const BUCKETS = [15, 30, 45, 60];
+const COLORS = ['#1a9850', '#91cf60', '#fee08b', '#fc8d59', '#d73027'];
+const UNKNOWN = '#5a6b8c';
+const colorFor = m => {
+  if (m == null) return UNKNOWN;
+  for (let i = 0; i < BUCKETS.length; i++) if (m <= BUCKETS[i]) return COLORS[i];
+  return COLORS[COLORS.length - 1];
+};
+const fmt = m => m == null ? '?' : (m < 60 ? m + ' min' : Math.floor(m/60) + 'h' + String(m%60).padStart(2,'0'));
+
+// ---- Contrôles ----
+const state = { sexe:'H', format:'S', mode:'best', cat:'*', echelon:120, tmax:150, jours:120 };
+
+document.querySelectorAll('.seg').forEach(seg => {
+  const key = seg.dataset.seg;
+  seg.querySelectorAll('button').forEach(b => b.onclick = () => {
+    seg.querySelectorAll('button').forEach(x => x.classList.remove('on'));
+    b.classList.add('on');
+    state[key === 'format' ? 'format' : key] = b.dataset.v;
+    render();
+  });
+});
+
+const catSel = document.getElementById('cat');
+catSel.innerHTML = '<option value="*">Toutes</option>' +
+  DATA.referentiel.categories_age.map(c => `<option value="${c.libelle}">${c.libelle}</option>`).join('');
+catSel.value = 'Senior';
+state.cat = 'Senior';
+catSel.onchange = () => { state.cat = catSel.value; render(); };
+
+const clSel = document.getElementById('classement');
+clSel.innerHTML = DATA.referentiel.classements
+  .slice().reverse()
+  .map(c => `<option value="${c.echelon}">${c.label}</option>`).join('');
+clSel.value = '120';
+clSel.onchange = () => { state.echelon = +clSel.value; render(); };
+
+const tmax = document.getElementById('tmax'), tmaxval = document.getElementById('tmaxval');
+tmax.oninput = () => {
+  state.tmax = +tmax.value;
+  tmaxval.textContent = state.tmax >= 150 ? 'illimité' : state.tmax + ' min';
+  render();
+};
+const jours = document.getElementById('jours'), joursval = document.getElementById('joursval');
+jours.oninput = () => { state.jours = +jours.value; joursval.textContent = state.jours + ' j'; render(); };
+
+// ---- Carte ----
+const map = L.map('map').setView([P.depart.lat, P.depart.lng], 12);
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  maxZoom: 19, attribution: '&copy; OpenStreetMap'
+}).addTo(map);
+L.marker([P.depart.lat, P.depart.lng], { title: 'Départ' })
+  .addTo(map).bindTooltip('Départ');
+let markerLayer = L.layerGroup().addTo(map);
+
+document.getElementById('legend').innerHTML = (() => {
+  let prev = 0, rows = [];
+  BUCKETS.forEach((e, i) => { rows.push(`<div><span style="background:${COLORS[i]}"></span>${prev}–${e} min</div>`); prev = e; });
+  rows.push(`<div><span style="background:${COLORS[4]}"></span>&gt; ${prev} min</div>`);
+  rows.push(`<div><span style="background:${UNKNOWN}"></span>inconnu</div>`);
+  return rows.join('');
+})();
+
+const minutesForMode = t =>
+  state.mode === 'velo' ? t.minutes_velo
+  : state.mode === 'transit' ? t.minutes_transit
+  : t.minutes_best;
+
+function matchingEpreuves(t) {
+  return t.epreuves.filter(e => {
+    if (e.sexe !== state.sexe && e.sexe !== 'mixte') return false;
+    if (state.format === 'S' && e.double) return false;
+    if (state.format === 'D' && !e.double) return false;
+    if (state.cat !== '*' && e.categorie_age !== state.cat) return false;
+    if (e.echelon_min != null && state.echelon < e.echelon_min) return false;
+    if (e.echelon_max != null && state.echelon > e.echelon_max) return false;
+    return true;
+  });
+}
+
+function popupHtml(t, eps, minutes) {
+  const lis = eps.map(e => {
+    const tarif = e.tarif_adulte ? ` · ${Math.round(e.tarif_adulte)}€` : '';
+    const rng = (e.classement_min || e.classement_max) ? ` (${e.classement_min}→${e.classement_max})` : '';
+    const clot = e.date_cloture ? ` · clôture ${e.date_cloture.slice(8,10)}/${e.date_cloture.slice(5,7)}` : '';
+    return `<li>${e.libelle}${rng}${tarif}${clot}</li>`;
+  }).join('');
+  const d = s => s.slice(8,10)+'/'+s.slice(5,7)+'/'+s.slice(0,4);
+  const meta = [t.surfaces && 'Surface : ' + t.surfaces, t.prix_espece && 'Prix : ' + Math.round(t.prix_espece) + '€']
+    .filter(Boolean).join(' · ');
+  return `<div style="min-width:230px">
+    <b>${t.libelle}</b>
+    <div style="color:#667">${t.club.libelle} — ${t.club.ville}</div>
+    <div>📅 ${d(t.date_debut)} → ${d(t.date_fin)}</div>
+    <ul style="margin:4px 0 0 -22px">${lis}</ul>
+    ${meta ? `<div style="color:#667;font-size:11px">${meta}</div>` : ''}
+    <div style="margin-top:6px">🚲 <b>${fmt(t.minutes_velo)}</b> | 🚇 <b>${fmt(t.minutes_transit)}</b> | ${(t.distance_m/1000).toFixed(1)} km</div>
+    <a class="cta" href="${t.url}" target="_blank" rel="noopener">${t.inscription_en_ligne ? "S'inscrire sur Ten'Up →" : "Voir la fiche Ten'Up →"}</a>
+  </div>`;
+}
+
+function render() {
+  markerLayer.clearLayers();
+  const horizon = new Date(); horizon.setDate(horizon.getDate() + state.jours);
+  let n = 0;
+  for (const t of DATA.tournois) {
+    if (new Date(t.date_debut) > horizon) continue;
+    const eps = matchingEpreuves(t);
+    if (!eps.length) continue;
+    const m = minutesForMode(t);
+    if (state.tmax < 150 && (m == null || m > state.tmax)) continue;
+    n++;
+    L.circleMarker([t.club.lat, t.club.lng], {
+      radius: 8, color: '#fff', weight: 2, fillColor: colorFor(m), fillOpacity: 1
+    }).bindPopup(popupHtml(t, eps, m))
+      .bindTooltip(`${t.libelle} — ${fmt(m)}`)
+      .addTo(markerLayer);
+  }
+  document.getElementById('count').textContent = n;
+}
+render();
+
+// ---- Changement d'adresse ----
+document.getElementById('regen').onclick = async () => {
+  const adresse = document.getElementById('adresse').value.trim();
+  const hint = document.getElementById('regenhint');
+  hint.textContent = 'Calcul en cours…';
+  try {
+    const r = await fetch('api/regenerate', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ adresse })
+    });
+    if (!r.ok) throw new Error(await r.text());
+    hint.textContent = 'Terminé, rechargement…';
+    location.reload();
+  } catch (e) {
+    hint.textContent = "Serveur non lancé. Change l'adresse dans .env, ou lance : "
+      + "python -m src.serve";
+  }
+};
+</script>
+</body>
+</html>
