@@ -48,3 +48,44 @@
 2025-12-25 17:57:48,203 - __main__ - INFO - ==================================================
 2025-12-25 17:57:48,203 - __main__ - INFO - ✓ Parsing terminé avec succès
 2025-12-25 17:57:48,203 - __main__ - INFO - ==================================================
+2025-12-25 22:05:31,746 - src.travel_calculator - ERROR - Erreur géocodage : 403 Client Error: Forbidden for url: https://nominatim.openstreetmap.org/search?q=76+rue+Sedaine+75011+Paris%2C+France&format=json&limit=1
+2025-12-25 22:05:31,747 - src.travel_calculator - WARNING - Impossible de géolocaliser : 76 rue Sedaine 75011 Paris, France
+2025-12-25 22:05:36,798 - src.travel_calculator - ERROR - Erreur géocodage : HTTPSConnectionPool(host='nominatim.openstreetmap.org', port=443): Read timed out. (read timeout=5)
+2025-12-25 22:05:36,798 - src.travel_calculator - WARNING - Impossible de géolocaliser : 76 rue Sedaine 75011 Paris, France
+2025-12-25 22:05:41,941 - src.travel_calculator - ERROR - Erreur géocodage : HTTPSConnectionPool(host='nominatim.openstreetmap.org', port=443): Read timed out. (read timeout=5)
+2025-12-25 22:05:41,943 - src.travel_calculator - WARNING - Impossible de géolocaliser : 76 rue Sedaine 75011 Paris, France
+2025-12-25 22:05:47,009 - src.travel_calculator - ERROR - Erreur géocodage : HTTPSConnectionPool(host='nominatim.openstreetmap.org', port=443): Read timed out. (read timeout=5)
+2025-12-25 22:05:47,010 - src.travel_calculator - WARNING - Impossible de géolocaliser : 76 rue Sedaine 75011 Paris, France
+2025-12-25 22:05:52,076 - src.travel_calculator - ERROR - Erreur géocodage : HTTPSConnectionPool(host='nominatim.openstreetmap.org', port=443): Read timed out. (read timeout=5)
+2025-12-25 22:05:52,077 - src.travel_calculator - WARNING - Impossible de géolocaliser : 76 rue Sedaine 75011 Paris, France
+2025-12-25 22:05:52,082 - src.travel_calculator - WARNING - Navitia: Pas de trajet trouvé pour Unknown
+2025-12-25 22:05:57,141 - src.travel_calculator - ERROR - Erreur géocodage : HTTPSConnectionPool(host='nominatim.openstreetmap.org', port=443): Read timed out. (read timeout=5)
+2025-12-25 22:05:57,142 - src.travel_calculator - WARNING - Impossible de géolocaliser : 76 rue Sedaine 75011 Paris, France
+2025-12-25 22:05:57,229 - src.travel_calculator - ERROR - Erreur géocodage : 503 Server Error: Service Temporarily Unavailable for url: https://nominatim.openstreetmap.org/search?q=76+rue+Sedaine+75011+Paris%2C+France&format=json&limit=1
+2025-12-25 22:05:57,229 - src.travel_calculator - WARNING - Impossible de géolocaliser : 76 rue Sedaine 75011 Paris, France
+2025-12-25 22:05:57,392 - src.travel_calculator - ERROR - Erreur géocodage : 503 Server Error: Service Temporarily Unavailable for url: https://nominatim.openstreetmap.org/search?q=76+rue+Sedaine+75011+Paris%2C+France&format=json&limit=1
+2025-12-25 22:05:57,393 - src.travel_calculator - WARNING - Impossible de géolocaliser : 76 rue Sedaine 75011 Paris, France
+2025-12-25 22:05:57,474 - src.travel_calculator - ERROR - Erreur géocodage : 503 Server Error: Service Temporarily Unavailable for url: https://nominatim.openstreetmap.org/search?q=76+rue+Sedaine+75011+Paris%2C+France&format=json&limit=1
+2025-12-25 22:05:57,475 - src.travel_calculator - WARNING - Impossible de géolocaliser : 76 rue Sedaine 75011 Paris, France
+2025-12-25 22:05:57,560 - src.travel_calculator - ERROR - Erreur géocodage : 503 Server Error: Service Temporarily Unavailable for url: https://nominatim.openstreetmap.org/search?q=76+rue+Sedaine+75011+Paris%2C+France&format=json&limit=1
+2025-12-25 22:05:57,561 - src.travel_calculator - WARNING - Impossible de géolocaliser : 76 rue Sedaine 75011 Paris, France
+2025-12-25 22:05:57,758 - src.travel_calculator - ERROR - Erreur géocodage : 503 Server Error: Service Temporarily Unavailable for url: https://nominatim.openstreetmap.org/search?q=Paris%2C+France&format=json&limit=1
+2025-12-25 22:05:57,759 - src.travel_calculator - WARNING - Impossible de géolocaliser : Paris, France
+2025-12-25 22:05:57,759 - src.parser - INFO - 🚗 Mode transport : cycling
+2025-12-25 22:05:57,759 - src.parser - INFO - 📍 Départ : Paris, France
+2025-12-27 12:28:58,834 - __main__ - INFO - ============================================================
+2025-12-27 12:28:58,834 - __main__ - INFO - 🎾 TenUp Parser - Démarrage
+2025-12-27 12:28:58,835 - __main__ - INFO - ============================================================
+2025-12-27 12:28:58,835 - __main__ - INFO - 📄 Fichier PDF : /Users/teddy/Desktop/Projets/Github/TenUp_Parser/data/input/tenup.pdf
+2025-12-27 12:28:58,835 - __main__ - INFO - 🚗 Mode transport : Vélo 🚴
+2025-12-27 12:28:58,835 - __main__ - INFO - ⏭️  Calcul des temps de trajet désactivé
+2025-12-27 12:28:58,835 - src.parser - INFO - ⏭️  Calcul des temps de trajet désactivé
+2025-12-27 12:28:58,835 - src.parser - INFO - 🎾 Ouverture du PDF : /Users/teddy/Desktop/Projets/Github/TenUp_Parser/data/input/tenup.pdf
+2025-12-27 12:28:58,847 - src.parser - INFO - 📄 33 pages à traiter
+2025-12-27 12:29:08,438 - src.parser - INFO - ✓ 250 tournoi(s) extrait(s)
+2025-12-27 12:29:08,438 - __main__ - INFO - ✓ 250 tournoi(s) trouvé(s)
+2025-12-27 12:29:08,445 - src.csv_exporter - INFO - ✓ 556 ligne(s) exportée(s) vers /Users/teddy/Desktop/Projets/Github/TenUp_Parser/data/output/tenup.csv
+2025-12-27 12:29:08,445 - __main__ - INFO - ============================================================
+2025-12-27 12:29:08,445 - __main__ - INFO - ✓ Parsing terminé avec succès
+2025-12-27 12:29:08,445 - __main__ - INFO - 📊 Résultats : /Users/teddy/Desktop/Projets/Github/TenUp_Parser/data/output/tenup.csv
+2025-12-27 12:29:08,445 - __main__ - INFO - ============================================================

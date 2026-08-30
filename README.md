@@ -8,12 +8,18 @@ Ce projet automatise l'extraction des informations de tournois de tennis à part
 
 ### Fonctionnalités
 
-- ✅ Extraction de texte depuis PDF
-- ✅ Parsing des données de tournois
-- ✅ Export en CSV avec colonnes standardisées
+- ✅ Extraction depuis PDF avec détection de tableaux (haute précision)
+- ✅ Parsing structuré des données de tournois
+- ✅ Export en CSV avec 18 colonnes standardisées
 - ✅ Export groupé par catégorie
+- ✅ **Calcul automatique des temps de trajet** (NOUVEAU!)
+  - 🚗 Voiture (OSRM gratuit)
+  - 🚶 À pied (OSRM gratuit)
+  - 🚴 Vélo (OSRM gratuit)
+  - 🚌 Transports en commun / Métro (Navitia gratuit - bientôt!)
 - ✅ Gestion complète des erreurs avec logging
 - ✅ Structure de projet professionnelle
+- ✅ 100% gratuit (zéro coût API)
 
 ## Structure du projet
 
@@ -76,10 +82,20 @@ TenUp_Parser/
 python main.py data/input/tournaments.pdf
 ```
 
-### Avec fichier de sortie personnalisé
+### Avec mode de transport (calcul des trajets)
 
 ```bash
-python main.py data/input/tournaments.pdf -o data/output/my_tournaments.csv
+# Voiture (par défaut)
+python main.py data/input/tournaments.pdf --mode driving
+
+# À pied
+python main.py data/input/tournaments.pdf --mode walking
+
+# Vélo
+python main.py data/input/tournaments.pdf --mode cycling
+
+# Transports en commun (métro/bus) - nécessite clé Navitia
+python main.py data/input/tournaments.pdf --mode transit
 ```
 
 ### Export groupé par catégorie
@@ -93,6 +109,35 @@ python main.py data/input/tournaments.pdf --by-category
 ```bash
 python main.py --help
 ```
+
+## Mode Transport & Trajets
+
+Le parser calcule automatiquement le temps de trajet entre votre adresse de départ et chaque tournoi.
+
+### Configuration
+
+1. **Adresse de départ** - Modifiez dans `.env` :
+   ```bash
+   DEPARTURE_ADDRESS=76 rue Sedaine 75011 Paris, France
+   TRANSPORT_MODE=driving
+   ```
+
+2. **Pour transports en commun** - Obtenez une clé Navitia gratuite :
+   - Allez sur https://www.navitia.io/
+   - Inscrivez-vous (gratuit, 5 minutes)
+   - Copiez votre clé API
+   - Ajoutez dans `.env` : `NAVITIA_API_KEY=votre_cle`
+
+### Modes disponibles
+
+| Mode | API utilisée | Disponibilité |
+|------|--------------|--------------|
+| `driving` 🚗 | OSRM | ✅ Disponible |
+| `walking` 🚶 | OSRM | ✅ Disponible |
+| `cycling` 🚴 | OSRM | ✅ Disponible |
+| `transit` 🚌 | Navitia | ⏳ En attente de clé |
+
+👉 **[Plus d'infos](docs/NAVITIA_SETUP.md)** sur la configuration Navitia
 
 ## Format de sortie
 
@@ -112,6 +157,7 @@ Les tournois sont exportés avec les colonnes suivantes :
 | PAIEMENT EN LIGNE | Paiement en ligne disponible ? |
 | CODE | Code du tournoi |
 | ENGAGEMENTS | Détails des engagements |
+| **Temps de trajet** | ⏱️ Durée estimée (nouveau!) |
 | INSTALLATIONS | Adresse et détails du lieu |
 | Téléphone | Numéro de téléphone |
 | Catégorie | Catégorie d'âge |

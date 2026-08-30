@@ -7,13 +7,26 @@ Point d'entrée de l'application
 
 import argparse
 import sys
+import os
 from pathlib import Path
+from dotenv import load_dotenv
 from src.logger import setup_logger
 from src.parser import TournamentParser
 from src.csv_exporter import CSVExporter
 from src.config import INPUT_DIR, OUTPUT_DIR
 
+# Charger les variables d'environnement
+load_dotenv()
+
 logger = setup_logger(__name__)
+
+# Modes de transport supportés
+TRANSPORT_MODES = {
+    "driving": "Voiture 🚗",
+    "walking": "À pied 🚶",
+    "cycling": "Vélo 🚴",
+    "transit": "Transports en commun 🚌",
+}
 
 
 def main():
@@ -26,7 +39,8 @@ Exemples d'utilisation:
   python main.py                                    # Utilise data/input/tenup.pdf
   python main.py data/input/tournaments.pdf
   python main.py data/input/tournaments.pdf -o data/output/result.csv
-  python main.py data/input/tournaments.pdf --by-category
+  python main.py data/input/tournaments.pdf --mode transit
+  python main.py data/input/tournaments.pdf --by-category --mode cycling
         """
     )
     
@@ -44,6 +58,13 @@ Exemples d'utilisation:
     )
     
     parser.add_argument(
+        "--mode",
+        choices=["driving", "walking", "cycling", "transit"],
+        default=os.getenv("TRANSPORT_MODE", "driving"),
+        help="Mode de transport pour les trajets (défaut: vaut TRANSPORT_MODE ou 'driving')"
+    )
+    
+    parser.add_argument(
         "--by-category",
         action="store_true",
         help="Exporter les résultats dans des fichiers séparés par catégorie"
@@ -55,6 +76,12 @@ Exemples d'utilisation:
         help="Mode verbose (plus de détails)"
     )
     
+    parser.add_argument(
+        "--skip-travel-time",
+        action="store_true",
+        help="Sauter le calcul des temps de trajet (plus rapide)"
+    )
+    
     args = parser.parse_args()
     
     # Vérifier que le fichier existe
@@ -63,17 +90,26 @@ Exemples d'utilisation:
         logger.error(f"❌ Fichier non trouvé : {pdf_path}")
         return False
     
-    logger.info("=" * 50)
+    logger.info("=" * 60)
     logger.info("🎾 TenUp Parser - Démarrage")
-    logger.info("=" * 50)
+    logger.info("=" * 60)
+    logger.info(f"📄 Fichier PDF : {pdf_path}")
+    logger.info(f"🚗 Mode transport : {TRANSPORT_MODES.get(args.mode, args.mode)}")
+    if args.skip_travel_time:
+        logger.info("⏭️  Calcul des temps de trajet désactivé")
     
     # Parser le PDF
-    tournament_parser = TournamentParser()
+    tournament_parser = TournamentParser(
+        transport_mode=args.mode,
+        skip_travel_time=args.skip_travel_time
+    )
     tournaments = tournament_parser.parse_pdf(str(pdf_path))
     
     if not tournaments:
         logger.warning("⚠️  Aucun tournoi trouvé dans le PDF")
         return False
+    
+    logger.info(f"✓ {len(tournaments)} tournoi(s) trouvé(s)")
     
     # Exporter les résultats
     exporter = CSVExporter()
@@ -86,9 +122,10 @@ Exemples d'utilisation:
         success = exporter.export_tournaments(tournaments, output_file)
     
     if success:
-        logger.info("=" * 50)
+        logger.info("=" * 60)
         logger.info("✓ Parsing terminé avec succès")
-        logger.info("=" * 50)
+        logger.info(f"📊 Résultats : {args.output}")
+        logger.info("=" * 60)
         return True
     else:
         logger.error("❌ Erreur lors de l'export")

@@ -1,12 +1,19 @@
 """
 Parser principal pour extraire les tournois de tennis depuis PDF
 Utilise l'extraction de tableaux pour une meilleure précision
+Supporte le calcul des temps de trajet (voiture, marche, vélo, transports en commun)
 """
 
 from typing import List, Dict, Optional, Tuple
 import re
+import os
 import pdfplumber
+from dotenv import load_dotenv
 from src.logger import setup_logger
+from src.travel_calculator import TravelTimeCalculator
+
+# Charger les variables d'environnement
+load_dotenv()
 
 logger = setup_logger(__name__)
 
@@ -14,9 +21,35 @@ logger = setup_logger(__name__)
 class TournamentParser:
     """Parse les données de tournois de tennis depuis PDF (tableaux)"""
     
-    def __init__(self):
-        """Initialise le parser"""
-        pass
+    def __init__(self, transport_mode: str = "driving", departure_address: str = None, skip_travel_time: bool = False):
+        """
+        Initialise le parser
+        
+        Args:
+            transport_mode: Mode de transport ("driving", "walking", "cycling", "transit")
+            departure_address: Adresse de départ personnalisée (sinon utilise .env)
+            skip_travel_time: Si True, ne pas calculer les temps de trajet
+        """
+        self.transport_mode = transport_mode
+        self.departure_address = departure_address or os.getenv("DEPARTURE_ADDRESS", "Paris, France")
+        self.skip_travel_time = skip_travel_time
+        
+        # Initialiser le calculateur de trajets uniquement si nécessaire
+        self.travel_calculator = None
+        if not skip_travel_time:
+            try:
+                self.travel_calculator = TravelTimeCalculator(
+                    departure_address=self.departure_address,
+                    navitia_api_key=os.getenv("NAVITIA_API_KEY")
+                )
+                logger.info(f"🚗 Mode transport : {transport_mode}")
+                logger.info(f"📍 Départ : {self.departure_address}")
+            except Exception as e:
+                logger.warning(f"⚠️  Impossible d'initialiser le calculateur de trajets : {e}")
+                logger.info("🚀 Poursuite sans calcul des temps de trajet")
+                self.skip_travel_time = True
+        else:
+            logger.info("⏭️  Calcul des temps de trajet désactivé")
     
     def _clean_text(self, text: str) -> str:
         """
@@ -124,6 +157,9 @@ class TournamentParser:
         
         tournament['_categories'] = categories
         
+        # Calculer le temps de trajet si les coordonnées sont disponibles
+        self._add_travel_time(tournament)
+        
         return tournament
     
     def _parse_col0(self, text: str, tournament: Dict) -> None:
@@ -219,3 +255,47 @@ class TournamentParser:
         """
         required_fields = ["Club", "Date début", "Date fin"]
         return all(field in tournament and tournament.get(field) for field in required_fields)
+    
+    def _add_travel_time(self, tournament: Dict) -> None:
+        """
+        Ajoute le temps de trajet au tournoi basé sur l'adresse d'installation
+        
+        Args:
+            tournament: Dictionnaire du tournoi à enrichir
+        """
+        # Si le calcul est désactivé, laisser vide
+        if self.skip_travel_time or self.travel_calculator is None:
+            tournament["Temps de trajet"] = ""
+            return
+        
+        try:
+            if "INSTALLATIONS" not in tournament or not tournament["INSTALLATIONS"]:
+                tournament["Temps de trajet"] = ""
+                return
+            
+            # Extraire une adresse exploitable depuis INSTALLATIONS
+            destination = self.travel_calculator.extract_address_from_installations(
+                tournament["INSTALLATIONS"]
+            )
+            
+            if not destination:
+                tournament["Temps de trajet"] = ""
+                return
+            
+            # Calculer le trajet
+            travel_info = self.travel_calculator.calculate_travel_time(
+                destination_address=destination,
+                mode=self.transport_mode
+            )
+            
+            if travel_info:
+                # Formater le résultat
+                formatted = self.travel_calculator.format_travel_info(travel_info)
+                tournament["Temps de trajet"] = formatted
+            else:
+                tournament["Temps de trajet"] = ""
+        
+        except Exception as e:
+            logger.warning(f"Erreur calcul temps de trajet : {e}")
+            tournament["Temps de trajet"] = ""
+

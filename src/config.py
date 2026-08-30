@@ -36,6 +36,7 @@ OUTPUT_COLUMNS = [
     "Epreuve",
     "Classement",
     "Droits",
+    "Temps de trajet",  # Nouvelle colonne
 ]
 
 # Formats acceptés
