@@ -39,7 +39,7 @@ from src.config import (  # noqa: E402
 from src.export import write_json  # noqa: E402
 from src.logger import setup_logger  # noqa: E402
 from src.map_builder import write_map  # noqa: E402
-from src.pipeline import attach_travel_times, fetch_all  # noqa: E402
+from src.pipeline import attach_car_times, attach_travel_times, fetch_all  # noqa: E402
 
 logger = setup_logger("main_carte")
 
@@ -117,13 +117,15 @@ def generate(
         return 0
 
     if travel_times:
+        from src.osrm import compute_car_times
         from src.travel_matrix import compute_travel_times
 
         clubs = list({t.club.code: t.club for t in tournaments}.values())
-        matrix = compute_travel_times(
-            [(o["id"], o["lat"], o["lng"]) for o in origines], clubs
+        origin_tuples = [(o["id"], o["lat"], o["lng"]) for o in origines]
+        attach_travel_times(tournaments, compute_travel_times(origin_tuples, clubs))
+        attach_car_times(
+            tournaments, compute_car_times(origin_tuples, clubs, CACHE_DIR)
         )
-        attach_travel_times(tournaments, matrix)
 
     write_json(tournaments, origines, radius_km)
     write_map(tournaments, origines, radius_km)

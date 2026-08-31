@@ -46,6 +46,7 @@ class TestImports(unittest.TestCase):
             "src.export",
             "src.map_builder",
             "src.travel_matrix",
+            "src.osrm",
         ):
             importlib.import_module(name)
 

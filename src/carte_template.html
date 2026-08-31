@@ -75,6 +75,7 @@
         <button data-v="best" class="on">Le + rapide</button>
         <button data-v="velo">Vélo</button>
         <button data-v="transit">Transports</button>
+        <button data-v="car">Voiture</button>
       </div>
     </div>
 
@@ -192,13 +193,14 @@ document.getElementById('legend').innerHTML = (() => {
 
 const timesFor = t => (t.temps && t.temps[state.origin]) || {};
 const bestOf = tt => {
-  const v = [tt.velo, tt.transit].filter(x => x != null);
+  const v = [tt.velo, tt.transit, tt.car].filter(x => x != null);
   return v.length ? Math.min(...v) : null;
 };
 const minutesForMode = t => {
   const tt = timesFor(t);
   return state.mode === 'velo' ? (tt.velo ?? null)
     : state.mode === 'transit' ? (tt.transit ?? null)
+    : state.mode === 'car' ? (tt.car ?? null)
     : bestOf(tt);
 };
 
@@ -230,7 +232,7 @@ function popupHtml(t, eps, minutes) {
     <div>📅 ${d(t.date_debut)} → ${d(t.date_fin)}</div>
     <ul style="margin:4px 0 0 -22px">${lis}</ul>
     ${meta ? `<div style="color:#667;font-size:11px">${meta}</div>` : ''}
-    <div style="margin-top:6px">🚲 <b>${fmt(timesFor(t).velo)}</b> | 🚇 <b>${fmt(timesFor(t).transit)}</b> | ${(t.distance_m/1000).toFixed(1)} km à vol d'oiseau</div>
+    <div style="margin-top:6px">🚲 <b>${fmt(timesFor(t).velo)}</b> | 🚇 <b>${fmt(timesFor(t).transit)}</b> | 🚗 <b>${fmt(timesFor(t).car)}</b> | ${(t.distance_m/1000).toFixed(1)} km</div>
     <a class="cta" href="${t.url}" target="_blank" rel="noopener">${t.inscription_en_ligne ? "S'inscrire sur Ten'Up →" : "Voir la fiche Ten'Up →"}</a>
   </div>`;
 }

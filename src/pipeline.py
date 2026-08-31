@@ -176,3 +176,13 @@ def attach_travel_times(
     """Applique {code_club: {origin_id: {'velo': min, 'transit': min}}} aux tournois."""
     for t in tournaments:
         t.temps = by_club.get(t.club.code) or {}
+
+
+def attach_car_times(
+    tournaments: list[Tournament], by_club_car: dict[str, dict]
+) -> None:
+    """Fusionne {code_club: {origin_id: minutes_voiture}} dans t.temps[oid]['car']."""
+    for t in tournaments:
+        car = by_club_car.get(t.club.code) or {}
+        for oid, mins in car.items():
+            t.temps.setdefault(oid, {"velo": None, "transit": None})["car"] = mins
