@@ -74,7 +74,7 @@ R5_DATA_DIR.mkdir(parents=True, exist_ok=True)
 # --- Point de départ ---------------------------------------------------
 # Adresse affichée + coordonnées. Si les coords sont None, elles sont
 # résolues via l'autocomplétion Ten'Up / Nominatim au 1er run et mises en cache.
-DEPARTURE_ADDRESS = os.getenv("DEPARTURE_ADDRESS", "76 rue Sedaine, 75011 Paris")
+DEPARTURE_ADDRESS = os.getenv("DEPARTURE_ADDRESS", "Paris, France")
 DEPARTURE_LAT = _env_float("DEPARTURE_LAT")
 DEPARTURE_LNG = _env_float("DEPARTURE_LNG")
 

@@ -118,7 +118,7 @@ Le parser calcule automatiquement le temps de trajet entre votre adresse de dép
 
 1. **Adresse de départ** - Modifiez dans `.env` :
    ```bash
-   DEPARTURE_ADDRESS=76 rue Sedaine 75011 Paris, France
+   DEPARTURE_ADDRESS=12 rue Example, 75000 Paris
    TRANSPORT_MODE=driving
    ```
 

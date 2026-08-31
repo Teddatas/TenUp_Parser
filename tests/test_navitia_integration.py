@@ -22,7 +22,7 @@ class TestNavitiaIntegration(unittest.TestCase):
     
     def setUp(self):
         """Préparation des tests"""
-        self.departure = "76 rue Sedaine 75011 Paris, France"
+        self.departure = "Paris, France"
         # Utilise une clé fictive pour les tests (sans vraie API)
         self.api_key = "test_fake_key_12345678901234567890"
     

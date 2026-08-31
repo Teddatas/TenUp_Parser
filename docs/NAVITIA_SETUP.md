@@ -44,7 +44,7 @@ load_dotenv()
 
 # Créer le calculateur
 calculator = TravelTimeCalculator(
-    departure_address="76 rue Sedaine 75011 Paris, France",
+    departure_address="Paris, France",
     navitia_api_key=os.getenv("NAVITIA_API_KEY")
 )
 
