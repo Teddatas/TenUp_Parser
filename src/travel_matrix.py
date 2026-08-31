@@ -38,6 +38,15 @@ logger = setup_logger(__name__)
 
 HOME_ID = "__home__"
 
+# Bbox large de l'Île-de-France + marge. Le réseau r5 ne couvre que l'IDF ;
+# hors de cette zone r5py « accrocherait » le point au bord du réseau et
+# renverrait un temps faux — on l'exclut (la voiture OSRM prend le relais).
+_IDF_BBOX = (48.00, 49.35, 1.30, 3.75)  # lat_min, lat_max, lng_min, lng_max
+
+
+def _in_idf(lat: float, lng: float) -> bool:
+    return _IDF_BBOX[0] <= lat <= _IDF_BBOX[1] and _IDF_BBOX[2] <= lng <= _IDF_BBOX[3]
+
 
 def _ensure_java_home() -> None:
     """r5py a besoin d'un JDK 21. Renseigne JAVA_HOME si absent."""
@@ -136,26 +145,36 @@ def compute_travel_times(
 
     import r5py
 
+    # r5 ne couvre que l'IDF : on ne passe au moteur que les points franciliens.
+    # Le résultat garde une entrée (None) pour tous les couples origine × club.
+    results: dict[str, dict[str, dict[str, Optional[int]]]] = {
+        c.code: {oid: {"velo": None, "transit": None} for oid, _, _ in origins}
+        for c in clubs
+    }
+    idf_origins = [(oid, lat, lng) for oid, lat, lng in origins if _in_idf(lat, lng)]
+    idf_clubs = [c for c in clubs if _in_idf(c.lat, c.lng)]
+    skipped = len(origins) - len(idf_origins)
+    if skipped:
+        logger.info(f"r5py : {skipped} origine(s) hors IDF → voiture uniquement")
+    if not idf_origins or not idf_clubs:
+        logger.warning("r5py : aucun point francilien à traiter")
+        return results
+
     departure = departure or _next_weekday_at(R5_DEPARTURE_WEEKDAY, R5_DEPARTURE_TIME)
     logger.info(
         f"r5py : construction du réseau ({R5_OSM_PBF.name} + {R5_GTFS_ZIP.name})…"
     )
     network = r5py.TransportNetwork(str(R5_OSM_PBF), [str(R5_GTFS_ZIP)])
 
-    origins_gdf = _points_gdf([(oid, lat, lng) for oid, lat, lng in origins])
-    dests = _points_gdf([(c.code, c.lat, c.lng) for c in clubs])
-
-    results: dict[str, dict[str, dict[str, Optional[int]]]] = {
-        c.code: {oid: {"velo": None, "transit": None} for oid, _, _ in origins}
-        for c in clubs
-    }
+    origins_gdf = _points_gdf([(oid, lat, lng) for oid, lat, lng in idf_origins])
+    dests = _points_gdf([(c.code, c.lat, c.lng) for c in idf_clubs])
 
     modes_by_key = {
         "velo": [r5py.TransportMode.BICYCLE],
         "transit": [r5py.TransportMode.TRANSIT, r5py.TransportMode.WALK],
     }
     for key, modes in modes_by_key.items():
-        logger.info(f"r5py : calcul {key} ({len(origins)} origine(s))…")
+        logger.info(f"r5py : calcul {key} ({len(idf_origins)} origine(s) IDF)…")
         try:
             extra = {"max_bicycle_traffic_stress": 4} if key == "velo" else {}
             matrix = _matrix_computer(

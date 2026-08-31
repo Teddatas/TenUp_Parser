@@ -7,14 +7,16 @@ calcule les temps de trajet hors-ligne (r5py) depuis une ou plusieurs origines,
 et produit une carte HTML autonome (filtres client-side : sexe, simple/double,
 catégorie d'âge, classement, mode, temps max, date, origine).
 
-    python main_carte.py                       # origine unique depuis .env
-    python main_carte.py --address "12 rue X, 75012 Paris"
-    python main_carte.py --origins origines.json   # multi-origines (défaut + amis)
+    python main_carte.py                       # origine « default » = Paris centre
+    python main_carte.py --address "12 rue X, 75012 Paris"   # run ad-hoc ailleurs
+    python main_carte.py --origins origines.json   # + adresses des comptes
     python main_carte.py --no-travel-time      # rapide, sans r5py
 
 Format --origins : [{"id": "u-jean", "label": "Jean",
                      "lat": 48.85, "lng": 2.34}]   (ou "address" au lieu de lat/lng)
-L'origine « default » (adresse de .env) est toujours ajoutée en tête.
+L'origine « default » (Paris centre) est toujours ajoutée en tête. La recherche
+Ten'Up est lancée une fois par zone : Paris centre + toute adresse hors des
+``radius_km`` d'une zone déjà couverte (ex : une adresse à Troyes).
 """
 
 from __future__ import annotations
@@ -30,7 +32,6 @@ load_dotenv()
 
 from src.config import (  # noqa: E402
     CACHE_DIR,
-    DEPARTURE_ADDRESS,
     DEPARTURE_LAT,
     DEPARTURE_LNG,
     SEARCH_RADIUS_KM,
@@ -44,6 +45,32 @@ from src.pipeline import attach_car_times, attach_travel_times, fetch_all  # noq
 logger = setup_logger("main_carte")
 
 DEFAULT_ID = "default"
+# Origine partagée à tous les comptes : un point central dans Paris (Île de la
+# Cité), pas l'adresse perso de qui lance le pipeline.
+PARIS_CENTER = (48.8566, 2.3522)
+PARIS_LABEL = "Paris centre"
+
+
+def _haversine_km(a: tuple[float, float], b: tuple[float, float]) -> float:
+    from math import asin, cos, radians, sin, sqrt
+
+    lat1, lng1, lat2, lng2 = map(radians, (a[0], a[1], b[0], b[1]))
+    h = sin((lat2 - lat1) / 2) ** 2 + cos(lat1) * cos(lat2) * sin((lng2 - lng1) / 2) ** 2
+    return 2 * 6371.0 * asin(sqrt(h))
+
+
+def _search_centers(
+    origines: list[dict], radius_km: int
+) -> list[tuple[float, float]]:
+    """Zones de recherche Ten'Up : greedy. On part de la 1re origine (Paris
+    centre) et on n'ajoute une zone que pour une origine hors de portée
+    (``radius_km``) de toutes les zones déjà retenues."""
+    centers: list[tuple[float, float]] = []
+    for o in origines:
+        pt = (o["lat"], o["lng"])
+        if not any(_haversine_km(pt, c) <= radius_km for c in centers):
+            centers.append(pt)
+    return centers
 
 
 def _geocode(address: str):
@@ -54,15 +81,15 @@ def _geocode(address: str):
 
 
 def resolve_home(address: str | None = None) -> tuple[float, float]:
-    address = address or DEPARTURE_ADDRESS
-    if not address and DEPARTURE_LAT is not None and DEPARTURE_LNG is not None:
-        return DEPARTURE_LAT, DEPARTURE_LNG
+    """Origine « default ». Sans ``--address`` explicite : Paris centre.
+    ``--address`` (ou DEPARTURE_LAT/LNG) permet un run ad-hoc centré ailleurs."""
+    if not address:
+        if DEPARTURE_LAT is not None and DEPARTURE_LNG is not None:
+            return DEPARTURE_LAT, DEPARTURE_LNG
+        return PARIS_CENTER
     coords = _geocode(address)
     if not coords:
-        logger.error(
-            f"Impossible de géocoder « {address} ». "
-            "Renseigner DEPARTURE_LAT / DEPARTURE_LNG dans .env."
-        )
+        logger.error(f"Impossible de géocoder « {address} ».")
         sys.exit(1)
     return coords
 
@@ -101,20 +128,28 @@ def generate(
 ) -> int:
     home = resolve_home(address)
     origines = [
-        {"id": DEFAULT_ID, "label": address or DEPARTURE_ADDRESS,
+        {"id": DEFAULT_ID, "label": address or PARIS_LABEL,
          "lat": home[0], "lng": home[1]}
     ] + _load_extra_origins(origins_file)
+
+    centers = _search_centers(origines, radius_km)
     logger.info(
-        f"Départ {home} · rayon {radius_km} km · fenêtre {window_days} j · "
-        f"{len(origines)} origine(s)"
+        f"{len(origines)} origine(s) · {len(centers)} zone(s) de recherche · "
+        f"rayon {radius_km} km · fenêtre {window_days} j"
     )
 
-    tournaments = fetch_all(
-        home, radius_km=radius_km, window_days=window_days, enrich=enrich
-    )
+    by_id: dict[str, object] = {}
+    for i, center in enumerate(centers, 1):
+        logger.info(f"Zone {i}/{len(centers)} : recherche autour de {center}")
+        for t in fetch_all(
+            center, radius_km=radius_km, window_days=window_days, enrich=enrich
+        ):
+            by_id.setdefault(t.id_homologation, t)
+    tournaments = sorted(by_id.values(), key=lambda x: (x.date_debut, x.distance_m))
     if not tournaments:
         logger.warning("Aucun tournoi.")
         return 0
+    logger.info(f"{len(tournaments)} tournois uniques (toutes zones confondues)")
 
     if travel_times:
         from src.osrm import compute_car_times
@@ -136,7 +171,8 @@ def main() -> None:
     p = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    p.add_argument("--address", default=None, help="adresse de départ (sinon .env)")
+    p.add_argument("--address", default=None,
+                   help="centre du run ad-hoc (défaut : Paris centre)")
     p.add_argument("--origins", default=None, help="fichier JSON d'origines supplémentaires")
     p.add_argument("--radius", type=int, default=SEARCH_RADIUS_KM, help="rayon km")
     p.add_argument("--window", type=int, default=SEARCH_WINDOW_DAYS, help="fenêtre jours")

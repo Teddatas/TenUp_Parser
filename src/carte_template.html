@@ -213,6 +213,8 @@ document.getElementById('legend').innerHTML = (() => {
 })();
 
 const timesFor = t => (t.temps && t.temps[state.origin]) || {};
+const _hav = (a,b,c,d) => { const p=Math.PI/180, x=0.5-Math.cos((c-a)*p)/2+Math.cos(a*p)*Math.cos(c*p)*(1-Math.cos((d-b)*p))/2; return 12742*Math.asin(Math.sqrt(x)); };
+const kmFromOrigin = club => { const o = originById(state.origin); return _hav(o.lat, o.lng, club.lat, club.lng); };
 const minutesForMode = t => {
   const tt = timesFor(t);
   const v = state.modes.map(m => tt[m]).filter(x => x != null);
@@ -257,7 +259,7 @@ function clubPopupHtml(club, items, t0) {
   const tt = timesFor(t0);
   return `<div style="min-width:235px">
     <div style="color:#667">${club.libelle} — ${club.ville}</div>
-    <div style="margin-top:4px">🚲 <b>${fmt(tt.velo)}</b> | 🚇 <b>${fmt(tt.transit)}</b> | 🚗 <b>${fmt(tt.car)}</b> | ${(t0.distance_m/1000).toFixed(1)} km</div>
+    <div style="margin-top:4px">🚲 <b>${fmt(tt.velo)}</b> | 🚇 <b>${fmt(tt.transit)}</b> | 🚗 <b>${fmt(tt.car)}</b> | ${kmFromOrigin(club).toFixed(1)} km</div>
     ${items.length > 1 ? `<div style="font-size:11px;color:#888">${items.length} tournois dans ce club</div>` : ''}
     ${items.map(it => tournoiBlock(it.t, it.eps)).join('')}
   </div>`;

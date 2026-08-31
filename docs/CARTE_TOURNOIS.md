@@ -39,12 +39,21 @@ scripts/download_r5_data.sh             # ~460 Mo : OSM Île-de-France + GTFS ID
 ```
 
 **Multi-origines** (`--origins`) : un JSON `[{"id","label","address"}]` (ou
-`lat`/`lng` au lieu de `address`). Les temps sont calculés depuis chaque origine ;
-l'origine `default` (adresse `.env`) est toujours ajoutée en tête. Le JSON de
-sortie porte `origines[]` et, par tournoi, `temps: {origin_id: {velo, transit}}`.
-La carte affiche un sélecteur « Point de départ » quand il y a >1 origine.
-Côté tedata.fr : `site/bin/refresh-tennis.sh` alimente `--origins` avec les
-adresses des comptes (voir `../../tedata-infra`).
+`lat`/`lng` au lieu de `address`). L'origine `default` = **Paris centre** (pas
+l'adresse `.env`) est toujours ajoutée en tête ; `--address` ne sert qu'à un run
+ad-hoc centré ailleurs. Les temps sont calculés depuis chaque origine (vélo /
+transports r5py = Île-de-France uniquement, voiture OSRM = toute la France).
+
+**Recherche par zone** : Ten'Up est interrogé une fois autour de Paris centre,
+puis une fois de plus pour toute origine hors des `radius_km` d'une zone déjà
+couverte (ex : une adresse à Troyes déclenche une 2ᵉ recherche autour de Troyes).
+Les tournois des différentes zones sont fusionnés (dédup par n° d'homologation).
+
+Le JSON de sortie porte `origines[]` et, par tournoi,
+`temps: {origin_id: {velo, transit, car}}`. La carte affiche un sélecteur
+« Point de départ » quand il y a >1 origine et recalcule la distance à vol
+d'oiseau selon l'origine choisie. Côté tedata.fr : `site/bin/refresh-tennis.sh`
+alimente `--origins` avec les adresses des comptes (voir `../../tedata-infra`).
 
 1er run : ~5 min (détail de ~650 tournois), ensuite cache (`data/cache/`, TTL 3–30 j).
 Construction du réseau R5 : ~2 min au 1er run, puis ~5 s (cache).
