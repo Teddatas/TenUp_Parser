@@ -24,6 +24,10 @@
   .seg button.on { background:var(--accent); color:#fff; font-weight:600; }
   select, input[type=text] { width:100%; padding:7px 8px; border:1px solid var(--line); border-radius:8px; font:inherit; background:var(--bg); }
   input[type=range] { width:100%; }
+  .daterow { display:flex; align-items:center; gap:6px; }
+  .daterow input[type=date] { flex:1; min-width:0; padding:6px 6px; border:1px solid var(--line);
+                              border-radius:8px; font:inherit; background:var(--bg); color:var(--fg); }
+  .daterow span { color:var(--muted); }
   .rowval { display:flex; justify-content:space-between; font-size:12px; color:var(--muted); }
   #count { font-weight:700; font-size:20px; }
   .legend { display:flex; flex-direction:column; gap:3px; margin-top:6px; font-size:12px; }
@@ -94,9 +98,12 @@
     </div>
 
     <div class="field">
-      <label>Débute dans les</label>
-      <input type="range" id="jours" min="7" max="120" step="1" value="120">
-      <div class="rowval"><span>7 j</span><span id="joursval">120 j</span></div>
+      <label>Début du tournoi</label>
+      <div class="daterow">
+        <input type="date" id="dfrom">
+        <span>→</span>
+        <input type="date" id="dto">
+      </div>
     </div>
 
     <div class="field">
@@ -133,7 +140,10 @@ const fmt = m => m == null ? '?' : (m < 60 ? m + ' min' : Math.floor(m/60) + 'h'
 
 // ---- Contrôles ----
 const ALL_MODES = ['velo', 'transit', 'car'];
-const state = { sexe:'H', format:'S', type:'*', modes:[...ALL_MODES], cat:'*', echelon:120, tmax:150, jours:120,
+const _todayISO = new Date().toISOString().slice(0, 10);
+const _maxISO = (DATA.tournois || []).reduce((a, t) => t.date_debut > a ? t.date_debut : a, _todayISO);
+const state = { sexe:'H', format:'S', type:'*', modes:[...ALL_MODES], cat:'*', echelon:120, tmax:150,
+                dfrom:_todayISO, dto:_maxISO,
                 origin: (ORIGINS[0] && ORIGINS[0].id) || 'default' };
 const originById = id => ORIGINS.find(o => o.id === id) || ORIGINS[0] || {lat:48.86,lng:2.35};
 
@@ -179,8 +189,19 @@ tmax.oninput = () => {
   tmaxval.textContent = state.tmax >= 150 ? 'illimité' : state.tmax + ' min';
   render();
 };
-const jours = document.getElementById('jours'), joursval = document.getElementById('joursval');
-jours.oninput = () => { state.jours = +jours.value; joursval.textContent = state.jours + ' j'; render(); };
+const dfromEl = document.getElementById('dfrom'), dtoEl = document.getElementById('dto');
+[dfromEl, dtoEl].forEach(el => { el.min = _todayISO; el.max = _maxISO; });
+dfromEl.value = state.dfrom; dtoEl.value = state.dto;
+dfromEl.onchange = () => {
+  state.dfrom = dfromEl.value || _todayISO;
+  if (state.dto < state.dfrom) { state.dto = state.dfrom; dtoEl.value = state.dto; }
+  render();
+};
+dtoEl.onchange = () => {
+  state.dto = dtoEl.value || _maxISO;
+  if (state.dfrom > state.dto) { state.dfrom = state.dto; dfromEl.value = state.dfrom; }
+  render();
+};
 
 const origSel = document.getElementById('origine');
 if (ORIGINS.length > 1) {
@@ -265,12 +286,14 @@ function clubPopupHtml(club, items, t0) {
   </div>`;
 }
 
+const SEARCH_RADIUS = ((DATA.parametres && DATA.parametres.rayon_km) || 30) + 3;
+
 function render() {
   markerLayer.clearLayers();
-  const horizon = new Date(); horizon.setDate(horizon.getDate() + state.jours);
   const byClub = new Map();
   for (const t of DATA.tournois) {
-    if (new Date(t.date_debut) > horizon) continue;
+    if (t.date_debut < state.dfrom || t.date_debut > state.dto) continue;
+    if (kmFromOrigin(t.club) > SEARCH_RADIUS) continue;  // proche de l'origine active
     const eps = matchingEpreuves(t);
     if (!eps.length) continue;
     const m = minutesForMode(t);
