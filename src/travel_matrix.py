@@ -31,6 +31,7 @@ from src.config import (
     R5_SPEED_CYCLING_KMH,
     R5_SPEED_WALKING_KMH,
 )
+from src.config import in_idf as _in_idf
 from src.logger import setup_logger
 from src.models import Club
 
@@ -38,14 +39,9 @@ logger = setup_logger(__name__)
 
 HOME_ID = "__home__"
 
-# Bbox large de l'Île-de-France + marge. Le réseau r5 ne couvre que l'IDF ;
-# hors de cette zone r5py « accrocherait » le point au bord du réseau et
-# renverrait un temps faux — on l'exclut (la voiture OSRM prend le relais).
-_IDF_BBOX = (48.00, 49.35, 1.30, 3.75)  # lat_min, lat_max, lng_min, lng_max
-
-
-def _in_idf(lat: float, lng: float) -> bool:
-    return _IDF_BBOX[0] <= lat <= _IDF_BBOX[1] and _IDF_BBOX[2] <= lng <= _IDF_BBOX[3]
+# Le réseau r5 ne couvre que l'IDF ; hors de cette zone r5py « accrocherait » le
+# point au bord du réseau et renverrait un temps faux — on l'exclut (voiture
+# OSRM prend le relais). `_in_idf` vit dans config.py (partagé avec main_carte).
 
 
 def _ensure_java_home() -> None:

@@ -59,17 +59,15 @@ def _haversine_km(a: tuple[float, float], b: tuple[float, float]) -> float:
     return 2 * 6371.0 * asin(sqrt(h))
 
 
-def _search_centers(
-    origines: list[dict], radius_km: int
-) -> list[tuple[float, float]]:
-    """Zones de recherche Ten'Up : greedy. On part de la 1re origine (Paris
-    centre) et on n'ajoute une zone que pour une origine hors de portée
-    (``radius_km``) de toutes les zones déjà retenues."""
-    centers: list[tuple[float, float]] = []
+def _search_centers(origines: list[dict]) -> list[tuple[float, float, int]]:
+    """Zones de recherche Ten'Up : greedy. On n'ajoute une zone que pour une
+    origine hors de portée de toutes les zones déjà retenues. Le rayon dépend
+    de la zone : 30 km en Île-de-France, 60 km ailleurs (villes moins denses)."""
+    centers: list[tuple[float, float, int]] = []
     for o in origines:
         pt = (o["lat"], o["lng"])
-        if not any(_haversine_km(pt, c) <= radius_km for c in centers):
-            centers.append(pt)
+        if not any(_haversine_km(pt, (clat, clng)) <= crad for clat, clng, crad in centers):
+            centers.append((o["lat"], o["lng"], o["rayon_km"]))
     return centers
 
 
@@ -126,23 +124,27 @@ def generate(
     travel_times: bool = True,
     enrich: bool = True,
 ) -> int:
+    from src.config import radius_for
+
     home = resolve_home(address)
     origines = [
         {"id": DEFAULT_ID, "label": address or PARIS_LABEL,
          "lat": home[0], "lng": home[1]}
     ] + _load_extra_origins(origins_file)
+    for o in origines:
+        o["rayon_km"] = radius_for(o["lat"], o["lng"], radius_km)
 
-    centers = _search_centers(origines, radius_km)
+    centers = _search_centers(origines)
     logger.info(
-        f"{len(origines)} origine(s) · {len(centers)} zone(s) de recherche · "
-        f"rayon {radius_km} km · fenêtre {window_days} j"
+        f"{len(origines)} origine(s) · {len(centers)} zone(s) de recherche "
+        f"({', '.join(f'{r} km' for _, _, r in centers)}) · fenêtre {window_days} j"
     )
 
     by_id: dict[str, object] = {}
-    for i, center in enumerate(centers, 1):
-        logger.info(f"Zone {i}/{len(centers)} : recherche autour de {center}")
+    for i, (clat, clng, crad) in enumerate(centers, 1):
+        logger.info(f"Zone {i}/{len(centers)} : recherche {crad} km autour de ({clat:.3f}, {clng:.3f})")
         for t in fetch_all(
-            center, radius_km=radius_km, window_days=window_days, enrich=enrich
+            (clat, clng), radius_km=crad, window_days=window_days, enrich=enrich
         ):
             by_id.setdefault(t.id_homologation, t)
     tournaments = sorted(by_id.values(), key=lambda x: (x.date_debut, x.distance_m))

@@ -286,14 +286,19 @@ function clubPopupHtml(club, items, t0) {
   </div>`;
 }
 
-const SEARCH_RADIUS = ((DATA.parametres && DATA.parametres.rayon_km) || 30) + 3;
+const _baseRadius = (DATA.parametres && DATA.parametres.rayon_km) || 30;
+const originRadius = () => {
+  const o = originById(state.origin);
+  return ((o && o.rayon_km) || _baseRadius) + 3;  // marge de tolérance
+};
 
 function render() {
   markerLayer.clearLayers();
+  const rad = originRadius();
   const byClub = new Map();
   for (const t of DATA.tournois) {
     if (t.date_debut < state.dfrom || t.date_debut > state.dto) continue;
-    if (kmFromOrigin(t.club) > SEARCH_RADIUS) continue;  // proche de l'origine active
+    if (kmFromOrigin(t.club) > rad) continue;  // proche de l'origine active
     const eps = matchingEpreuves(t);
     if (!eps.length) continue;
     const m = minutesForMode(t);

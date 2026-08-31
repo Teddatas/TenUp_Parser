@@ -82,7 +82,22 @@ DEPARTURE_LNG = _env_float("DEPARTURE_LNG")
 # On récupère TOUS les tournois du rayon (à venir) ; sexe / simple-double /
 # catégorie d'âge / classement sont filtrés en direct dans la carte.
 SEARCH_RADIUS_KM = int(os.getenv("SEARCH_RADIUS_KM", "30"))
+# Rayon élargi pour les zones hors Île-de-France (villes moins denses en tournois).
+SEARCH_RADIUS_KM_WIDE = int(os.getenv("SEARCH_RADIUS_KM_WIDE", "60"))
 SEARCH_WINDOW_DAYS = int(os.getenv("SEARCH_WINDOW_DAYS", "120"))
+
+# Bbox large de l'Île-de-France (+ marge). Sert à deux choses : borner r5py
+# (réseau IDF only) et choisir le rayon de recherche (IDF = 30 km, ailleurs = 60).
+IDF_BBOX = (48.00, 49.35, 1.30, 3.75)  # lat_min, lat_max, lng_min, lng_max
+
+
+def in_idf(lat: float, lng: float) -> bool:
+    return IDF_BBOX[0] <= lat <= IDF_BBOX[1] and IDF_BBOX[2] <= lng <= IDF_BBOX[3]
+
+
+def radius_for(lat: float, lng: float, base: int = SEARCH_RADIUS_KM) -> int:
+    """Rayon de recherche pour un point : ``base`` en IDF, élargi ailleurs."""
+    return base if in_idf(lat, lng) else max(base, SEARCH_RADIUS_KM_WIDE)
 
 # --- r5py / temps de trajet ------------------------------------------------
 # Fichiers de données (voir scripts/download_r5_data.sh)
