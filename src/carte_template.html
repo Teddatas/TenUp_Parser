@@ -71,11 +71,10 @@
 
     <div class="field">
       <label>Trajet</label>
-      <div class="seg" data-seg="mode">
-        <button data-v="best" class="on">Le + rapide</button>
-        <button data-v="velo">Vélo</button>
-        <button data-v="transit">Transports</button>
-        <button data-v="car">Voiture</button>
+      <div class="seg tn-multi" data-multi="modes">
+        <button data-v="velo" class="on">Vélo</button>
+        <button data-v="transit" class="on">Transports</button>
+        <button data-v="car" class="on">Voiture</button>
       </div>
     </div>
 
@@ -124,17 +123,30 @@ const colorFor = m => {
 const fmt = m => m == null ? '?' : (m < 60 ? m + ' min' : Math.floor(m/60) + 'h' + String(m%60).padStart(2,'0'));
 
 // ---- Contrôles ----
-const state = { sexe:'H', format:'S', mode:'best', cat:'*', echelon:120, tmax:150, jours:120,
+const ALL_MODES = ['velo', 'transit', 'car'];
+const state = { sexe:'H', format:'S', modes:[...ALL_MODES], cat:'*', echelon:120, tmax:150, jours:120,
                 origin: (ORIGINS[0] && ORIGINS[0].id) || 'default' };
 const originById = id => ORIGINS.find(o => o.id === id) || ORIGINS[0] || {lat:48.86,lng:2.35};
 
-document.querySelectorAll('.seg').forEach(seg => {
+document.querySelectorAll('.seg[data-seg]').forEach(seg => {
   const key = seg.dataset.seg;
   seg.querySelectorAll('button').forEach(b => b.onclick = () => {
     seg.querySelectorAll('button').forEach(x => x.classList.remove('on'));
     b.classList.add('on');
-    state[key === 'format' ? 'format' : key] = b.dataset.v;
+    state[key] = b.dataset.v;
     render();
+  });
+});
+document.querySelectorAll('.tn-multi').forEach(seg => {
+  seg.querySelectorAll('button').forEach(b => b.onclick = () => {
+    const set = new Set(state.modes);
+    set.has(b.dataset.v) ? set.delete(b.dataset.v) : set.add(b.dataset.v);
+    if (set.size) {
+      state.modes = [...set];
+      seg.querySelectorAll('button').forEach(x =>
+        x.classList.toggle('on', state.modes.includes(x.dataset.v)));
+      render();
+    }
   });
 });
 
@@ -192,16 +204,10 @@ document.getElementById('legend').innerHTML = (() => {
 })();
 
 const timesFor = t => (t.temps && t.temps[state.origin]) || {};
-const bestOf = tt => {
-  const v = [tt.velo, tt.transit, tt.car].filter(x => x != null);
-  return v.length ? Math.min(...v) : null;
-};
 const minutesForMode = t => {
   const tt = timesFor(t);
-  return state.mode === 'velo' ? (tt.velo ?? null)
-    : state.mode === 'transit' ? (tt.transit ?? null)
-    : state.mode === 'car' ? (tt.car ?? null)
-    : bestOf(tt);
+  const v = state.modes.map(m => tt[m]).filter(x => x != null);
+  return v.length ? Math.min(...v) : null;
 };
 
 function matchingEpreuves(t) {
