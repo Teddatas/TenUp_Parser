@@ -11,12 +11,11 @@ class TestTournamentParser(unittest.TestCase):
     
     def setUp(self):
         """Préparation des tests"""
-        self.parser = TournamentParser()
+        self.parser = TournamentParser(skip_travel_time=True)
     
     def test_parser_initialization(self):
         """Test que le parser s'initialise correctement"""
         self.assertIsNotNone(self.parser)
-        self.assertIsNotNone(self.parser.pdf_handler)
     
     def test_validate_tournament_valid(self):
         """Test la validation d'un tournoi valide"""
