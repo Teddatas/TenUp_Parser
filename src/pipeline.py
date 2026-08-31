@@ -173,8 +173,6 @@ def fetch_all(
 def attach_travel_times(
     tournaments: list[Tournament], by_club: dict[str, dict]
 ) -> None:
-    """Applique {code_club: {'velo': min, 'transit': min}} aux tournois."""
+    """Applique {code_club: {origin_id: {'velo': min, 'transit': min}}} aux tournois."""
     for t in tournaments:
-        times = by_club.get(t.club.code) or {}
-        t.minutes_velo = times.get("velo")
-        t.minutes_transit = times.get("transit")
+        t.temps = by_club.get(t.club.code) or {}

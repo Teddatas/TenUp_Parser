@@ -20,6 +20,8 @@ import os
 import shutil
 from typing import Iterable, Optional
 
+Origin = tuple[str, float, float]  # (origin_id, lat, lng)
+
 from src.config import (
     R5_DEPARTURE_TIME,
     R5_DEPARTURE_WEEKDAY,
@@ -99,15 +101,20 @@ def _matrix_computer(network, origins, destinations, modes, departure, **extra):
 
 
 def compute_travel_times(
-    home: tuple[float, float],
+    origins: list[Origin],
     clubs: Iterable[Club],
     *,
     departure: Optional[dt.datetime] = None,
-) -> dict[str, dict[str, Optional[int]]]:
-    """Renvoie {code_club: {'velo': minutes|None, 'transit': minutes|None}}."""
+) -> dict[str, dict[str, dict[str, Optional[int]]]]:
+    """Temps vélo + transports depuis plusieurs origines.
+
+    ``origins`` : liste de ``(origin_id, lat, lng)``.
+    Renvoie ``{code_club: {origin_id: {'velo': min|None, 'transit': min|None}}}``.
+    """
     clubs = [c for c in clubs if c.has_coords]
-    if not clubs:
-        return {}
+    empty: dict = {}
+    if not clubs or not origins:
+        return empty
 
     import importlib.util
 
@@ -116,7 +123,7 @@ def compute_travel_times(
             "r5py / geopandas non installés — temps de trajet ignorés "
             "(pip install -r requirements-carte.txt)"
         )
-        return {}
+        return empty
 
     _ensure_java_home()
 
@@ -125,7 +132,7 @@ def compute_travel_times(
             f"Données r5 manquantes ({R5_OSM_PBF.name} / {R5_GTFS_ZIP.name}) — "
             "lancer scripts/download_r5_data.sh. Temps de trajet ignorés."
         )
-        return {}
+        return empty
 
     import r5py
 
@@ -135,11 +142,12 @@ def compute_travel_times(
     )
     network = r5py.TransportNetwork(str(R5_OSM_PBF), [str(R5_GTFS_ZIP)])
 
-    origin = _points_gdf([(HOME_ID, home[0], home[1])])
+    origins_gdf = _points_gdf([(oid, lat, lng) for oid, lat, lng in origins])
     dests = _points_gdf([(c.code, c.lat, c.lng) for c in clubs])
 
-    results: dict[str, dict[str, Optional[int]]] = {
-        c.code: {"velo": None, "transit": None} for c in clubs
+    results: dict[str, dict[str, dict[str, Optional[int]]]] = {
+        c.code: {oid: {"velo": None, "transit": None} for oid, _, _ in origins}
+        for c in clubs
     }
 
     modes_by_key = {
@@ -147,23 +155,24 @@ def compute_travel_times(
         "transit": [r5py.TransportMode.TRANSIT, r5py.TransportMode.WALK],
     }
     for key, modes in modes_by_key.items():
-        logger.info(f"r5py : calcul {key}…")
+        logger.info(f"r5py : calcul {key} ({len(origins)} origine(s))…")
         try:
             extra = {"max_bicycle_traffic_stress": 4} if key == "velo" else {}
-            matrix = _matrix_computer(network, origin, dests, modes, departure, **extra)
+            matrix = _matrix_computer(
+                network, origins_gdf, dests, modes, departure, **extra
+            )
         except Exception as e:  # pragma: no cover - dépend de l'env r5py
             logger.error(f"r5py {key} a échoué : {e}")
             continue
         for _, row in matrix.iterrows():
-            code = row["to_id"]
-            tt = row["travel_time"]
-            if code in results and tt is not None and tt == tt:  # not NaN
-                results[code][key] = int(round(float(tt)))
+            oid, code, tt = row["from_id"], row["to_id"], row["travel_time"]
+            if code in results and oid in results[code] and tt is not None and tt == tt:
+                results[code][oid][key] = int(round(float(tt)))
 
-    n_velo = sum(1 for v in results.values() if v["velo"] is not None)
-    n_tr = sum(1 for v in results.values() if v["transit"] is not None)
-    logger.info(
-        f"r5py : {n_velo}/{len(results)} clubs joignables à vélo, "
-        f"{n_tr}/{len(results)} en transports (créneau {departure:%a %d/%m %H:%M})"
-    )
+    for oid, _, _ in origins:
+        n_v = sum(1 for c in results.values() if c[oid]["velo"] is not None)
+        n_t = sum(1 for c in results.values() if c[oid]["transit"] is not None)
+        logger.info(
+            f"r5py [{oid}] : {n_v}/{len(results)} clubs à vélo, {n_t} en transports"
+        )
     return results

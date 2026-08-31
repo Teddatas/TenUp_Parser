@@ -96,11 +96,9 @@
       <div class="legend" id="legend"></div>
     </div>
 
-    <div class="field">
-      <label>Adresse de départ</label>
-      <input type="text" id="adresse">
-      <button class="apply" id="regen">Recalculer les trajets</button>
-      <div class="hint" id="regenhint">Change le point de départ (relance le calcul, ~30 s).</div>
+    <div class="field" id="origine-field" hidden>
+      <label>Point de départ</label>
+      <select id="origine"></select>
     </div>
   </div>
   <div id="map"></div>
@@ -109,10 +107,10 @@
 <script id="data" type="application/json">/*__DATA__*/</script>
 <script>
 const DATA = JSON.parse(document.getElementById('data').textContent);
-const P = DATA.parametres;
+const ORIGINS = DATA.origines || [];
+const P = DATA.parametres || {};
 document.getElementById('meta').textContent =
-  `Départ : ${P.depart.adresse} · rayon ${P.rayon_km} km · ${DATA.genere_le.slice(0,16).replace('T',' ')}`;
-document.getElementById('adresse').value = P.depart.adresse;
+  `${ORIGINS[0] ? ORIGINS[0].label : ''} · rayon ${P.rayon_km} km · ${DATA.genere_le.slice(0,16).replace('T',' ')}`;
 
 const BUCKETS = [15, 30, 45, 60];
 const COLORS = ['#1a9850', '#91cf60', '#fee08b', '#fc8d59', '#d73027'];
@@ -125,7 +123,9 @@ const colorFor = m => {
 const fmt = m => m == null ? '?' : (m < 60 ? m + ' min' : Math.floor(m/60) + 'h' + String(m%60).padStart(2,'0'));
 
 // ---- Contrôles ----
-const state = { sexe:'H', format:'S', mode:'best', cat:'*', echelon:120, tmax:150, jours:120 };
+const state = { sexe:'H', format:'S', mode:'best', cat:'*', echelon:120, tmax:150, jours:120,
+                origin: (ORIGINS[0] && ORIGINS[0].id) || 'default' };
+const originById = id => ORIGINS.find(o => o.id === id) || ORIGINS[0] || {lat:48.86,lng:2.35};
 
 document.querySelectorAll('.seg').forEach(seg => {
   const key = seg.dataset.seg;
@@ -160,13 +160,26 @@ tmax.oninput = () => {
 const jours = document.getElementById('jours'), joursval = document.getElementById('joursval');
 jours.oninput = () => { state.jours = +jours.value; joursval.textContent = state.jours + ' j'; render(); };
 
+const origSel = document.getElementById('origine');
+if (ORIGINS.length > 1) {
+  document.getElementById('origine-field').hidden = false;
+  origSel.innerHTML = ORIGINS.map(o => `<option value="${o.id}">${o.label}</option>`).join('');
+  origSel.value = state.origin;
+  origSel.onchange = () => { state.origin = origSel.value; moveHome(); render(); };
+}
+
 // ---- Carte ----
-const map = L.map('map').setView([P.depart.lat, P.depart.lng], 12);
+const start = originById(state.origin);
+const map = L.map('map').setView([start.lat, start.lng], 12);
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
   maxZoom: 19, attribution: '&copy; OpenStreetMap'
 }).addTo(map);
-L.marker([P.depart.lat, P.depart.lng], { title: 'Départ' })
-  .addTo(map).bindTooltip('Départ');
+let homeMarker = L.marker([start.lat, start.lng], { title: 'Départ' }).addTo(map).bindTooltip('Départ');
+function moveHome() {
+  const o = originById(state.origin);
+  homeMarker.setLatLng([o.lat, o.lng]);
+  map.panTo([o.lat, o.lng]);
+}
 let markerLayer = L.layerGroup().addTo(map);
 
 document.getElementById('legend').innerHTML = (() => {
@@ -177,10 +190,17 @@ document.getElementById('legend').innerHTML = (() => {
   return rows.join('');
 })();
 
-const minutesForMode = t =>
-  state.mode === 'velo' ? t.minutes_velo
-  : state.mode === 'transit' ? t.minutes_transit
-  : t.minutes_best;
+const timesFor = t => (t.temps && t.temps[state.origin]) || {};
+const bestOf = tt => {
+  const v = [tt.velo, tt.transit].filter(x => x != null);
+  return v.length ? Math.min(...v) : null;
+};
+const minutesForMode = t => {
+  const tt = timesFor(t);
+  return state.mode === 'velo' ? (tt.velo ?? null)
+    : state.mode === 'transit' ? (tt.transit ?? null)
+    : bestOf(tt);
+};
 
 function matchingEpreuves(t) {
   return t.epreuves.filter(e => {
@@ -210,7 +230,7 @@ function popupHtml(t, eps, minutes) {
     <div>📅 ${d(t.date_debut)} → ${d(t.date_fin)}</div>
     <ul style="margin:4px 0 0 -22px">${lis}</ul>
     ${meta ? `<div style="color:#667;font-size:11px">${meta}</div>` : ''}
-    <div style="margin-top:6px">🚲 <b>${fmt(t.minutes_velo)}</b> | 🚇 <b>${fmt(t.minutes_transit)}</b> | ${(t.distance_m/1000).toFixed(1)} km</div>
+    <div style="margin-top:6px">🚲 <b>${fmt(timesFor(t).velo)}</b> | 🚇 <b>${fmt(timesFor(t).transit)}</b> | ${(t.distance_m/1000).toFixed(1)} km à vol d'oiseau</div>
     <a class="cta" href="${t.url}" target="_blank" rel="noopener">${t.inscription_en_ligne ? "S'inscrire sur Ten'Up →" : "Voir la fiche Ten'Up →"}</a>
   </div>`;
 }
@@ -235,25 +255,6 @@ function render() {
   document.getElementById('count').textContent = n;
 }
 render();
-
-// ---- Changement d'adresse ----
-document.getElementById('regen').onclick = async () => {
-  const adresse = document.getElementById('adresse').value.trim();
-  const hint = document.getElementById('regenhint');
-  hint.textContent = 'Calcul en cours…';
-  try {
-    const r = await fetch('api/regenerate', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ adresse })
-    });
-    if (!r.ok) throw new Error(await r.text());
-    hint.textContent = 'Terminé, rechargement…';
-    location.reload();
-  } catch (e) {
-    hint.textContent = "Serveur non lancé. Change l'adresse dans .env, ou lance : "
-      + "python -m src.serve";
-  }
-};
 </script>
 </body>
 </html>

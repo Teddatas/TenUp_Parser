@@ -34,11 +34,17 @@ scripts/download_r5_data.sh             # ~460 Mo : OSM Île-de-France + GTFS ID
 .venv-carte/bin/python main_carte.py                    # tout, params de .env
 .venv-carte/bin/python main_carte.py --radius 20 --window 90
 .venv-carte/bin/python main_carte.py --address "12 rue X, 75012 Paris"
+.venv-carte/bin/python main_carte.py --origins origines.json   # multi-origines
 .venv-carte/bin/python main_carte.py --no-travel-time   # rapide, sans r5py
-
-# serveur local : carte + changement d'adresse depuis le panneau
-.venv-carte/bin/python -m src.serve                     # http://localhost:8000
 ```
+
+**Multi-origines** (`--origins`) : un JSON `[{"id","label","address"}]` (ou
+`lat`/`lng` au lieu de `address`). Les temps sont calculés depuis chaque origine ;
+l'origine `default` (adresse `.env`) est toujours ajoutée en tête. Le JSON de
+sortie porte `origines[]` et, par tournoi, `temps: {origin_id: {velo, transit}}`.
+La carte affiche un sélecteur « Point de départ » quand il y a >1 origine.
+Côté tedata.fr : `site/bin/refresh-tennis.sh` alimente `--origins` avec les
+adresses des comptes (voir `../../tedata-infra`).
 
 1er run : ~5 min (détail de ~650 tournois), ensuite cache (`data/cache/`, TTL 3–30 j).
 Construction du réseau R5 : ~2 min au 1er run, puis ~5 s (cache).
@@ -54,7 +60,7 @@ Construction du réseau R5 : ~2 min au 1er run, puis ~5 s (cache).
 | JSON + carte (filtres client-side) | `export.py` / `map_builder.py` + `carte_template.html` |
 
 Le filtrage sport/classement/âge/date est **entièrement côté client** : changer un
-filtre ne relance rien. Seul le **changement d'adresse** relance le pipeline
+filtre ne relance rien. Le **calcul multi-origines** se fait au moment de la génération (option `--origins`).
 (via `src/serve.py`).
 
 ## Temps de trajet (r5py)

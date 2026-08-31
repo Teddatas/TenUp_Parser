@@ -81,18 +81,13 @@ class Tournament:
     mail_ja: str = ""
     infos: str = ""
 
-    # Temps de trajet (minutes) depuis le point de départ
-    minutes_velo: Optional[int] = None
-    minutes_transit: Optional[int] = None
+    # Temps de trajet (minutes) par origine :
+    #   {origin_id: {"velo": int|None, "transit": int|None}}
+    temps: dict = field(default_factory=dict)
 
     @property
     def url(self) -> str:
         return f"https://tenup.fft.fr/tournoi/{self.id_homologation}"
-
-    @property
-    def minutes_best(self) -> Optional[int]:
-        vals = [m for m in (self.minutes_velo, self.minutes_transit) if m is not None]
-        return min(vals) if vals else None
 
     @property
     def tarif_min(self) -> Optional[float]:
@@ -105,6 +100,5 @@ class Tournament:
         d["date_fin"] = self.date_fin.isoformat()
         d["epreuves"] = [e.to_dict() for e in self.epreuves]
         d["url"] = self.url
-        d["minutes_best"] = self.minutes_best
         d["tarif_min"] = self.tarif_min
         return d
