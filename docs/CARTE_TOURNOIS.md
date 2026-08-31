@@ -61,7 +61,6 @@ Construction du réseau R5 : ~2 min au 1er run, puis ~5 s (cache).
 
 Le filtrage sport/classement/âge/date est **entièrement côté client** : changer un
 filtre ne relance rien. Le **calcul multi-origines** se fait au moment de la génération (option `--origins`).
-(via `src/serve.py`).
 
 ## Temps de trajet (r5py)
 
