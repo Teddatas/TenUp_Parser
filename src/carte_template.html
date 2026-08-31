@@ -60,6 +60,15 @@
     </div>
 
     <div class="field">
+      <label>Type</label>
+      <div class="seg" data-seg="type">
+        <button data-v="*" class="on">Tous</button>
+        <button data-v="standard">Tournoi</button>
+        <button data-v="mc">TMC</button>
+      </div>
+    </div>
+
+    <div class="field">
       <label>Catégorie d'âge</label>
       <select id="cat"></select>
     </div>
@@ -124,7 +133,7 @@ const fmt = m => m == null ? '?' : (m < 60 ? m + ' min' : Math.floor(m/60) + 'h'
 
 // ---- Contrôles ----
 const ALL_MODES = ['velo', 'transit', 'car'];
-const state = { sexe:'H', format:'S', modes:[...ALL_MODES], cat:'*', echelon:120, tmax:150, jours:120,
+const state = { sexe:'H', format:'S', type:'*', modes:[...ALL_MODES], cat:'*', echelon:120, tmax:150, jours:120,
                 origin: (ORIGINS[0] && ORIGINS[0].id) || 'default' };
 const originById = id => ORIGINS.find(o => o.id === id) || ORIGINS[0] || {lat:48.86,lng:2.35};
 
@@ -215,6 +224,7 @@ function matchingEpreuves(t) {
     if (e.sexe !== state.sexe && e.sexe !== 'mixte') return false;
     if (state.format === 'S' && e.double) return false;
     if (state.format === 'D' && !e.double) return false;
+    if (state.type !== '*' && (e.format || 'standard') !== state.type) return false;
     if (state.cat !== '*' && e.categorie_age !== state.cat) return false;
     if (e.echelon_min != null && state.echelon < e.echelon_min) return false;
     if (e.echelon_max != null && state.echelon > e.echelon_max) return false;
@@ -222,42 +232,61 @@ function matchingEpreuves(t) {
   });
 }
 
-function popupHtml(t, eps, minutes) {
+const dfr = s => s.slice(8,10)+'/'+s.slice(5,7)+'/'+s.slice(0,4);
+
+function tournoiBlock(t, eps) {
   const lis = eps.map(e => {
     const tarif = e.tarif_adulte ? ` · ${Math.round(e.tarif_adulte)}€` : '';
     const rng = (e.classement_min || e.classement_max) ? ` (${e.classement_min}→${e.classement_max})` : '';
     const clot = e.date_cloture ? ` · clôture ${e.date_cloture.slice(8,10)}/${e.date_cloture.slice(5,7)}` : '';
-    return `<li>${e.libelle}${rng}${tarif}${clot}</li>`;
+    const mc = (e.format === 'mc') ? ' · TMC' : '';
+    return `<li>${e.libelle}${rng}${tarif}${clot}${mc}</li>`;
   }).join('');
-  const d = s => s.slice(8,10)+'/'+s.slice(5,7)+'/'+s.slice(0,4);
   const meta = [t.surfaces && 'Surface : ' + t.surfaces, t.prix_espece && 'Prix : ' + Math.round(t.prix_espece) + '€']
     .filter(Boolean).join(' · ');
-  return `<div style="min-width:230px">
+  return `<div style="margin-top:8px;padding-top:8px;border-top:1px solid #e5e2dc">
     <b>${t.libelle}</b>
-    <div style="color:#667">${t.club.libelle} — ${t.club.ville}</div>
-    <div>📅 ${d(t.date_debut)} → ${d(t.date_fin)}</div>
+    <div>📅 ${dfr(t.date_debut)} → ${dfr(t.date_fin)}</div>
     <ul style="margin:4px 0 0 -22px">${lis}</ul>
     ${meta ? `<div style="color:#667;font-size:11px">${meta}</div>` : ''}
-    <div style="margin-top:6px">🚲 <b>${fmt(timesFor(t).velo)}</b> | 🚇 <b>${fmt(timesFor(t).transit)}</b> | 🚗 <b>${fmt(timesFor(t).car)}</b> | ${(t.distance_m/1000).toFixed(1)} km</div>
     <a class="cta" href="${t.url}" target="_blank" rel="noopener">${t.inscription_en_ligne ? "S'inscrire sur Ten'Up →" : "Voir la fiche Ten'Up →"}</a>
+  </div>`;
+}
+
+function clubPopupHtml(club, items, t0) {
+  const tt = timesFor(t0);
+  return `<div style="min-width:235px">
+    <div style="color:#667">${club.libelle} — ${club.ville}</div>
+    <div style="margin-top:4px">🚲 <b>${fmt(tt.velo)}</b> | 🚇 <b>${fmt(tt.transit)}</b> | 🚗 <b>${fmt(tt.car)}</b> | ${(t0.distance_m/1000).toFixed(1)} km</div>
+    ${items.length > 1 ? `<div style="font-size:11px;color:#888">${items.length} tournois dans ce club</div>` : ''}
+    ${items.map(it => tournoiBlock(it.t, it.eps)).join('')}
   </div>`;
 }
 
 function render() {
   markerLayer.clearLayers();
   const horizon = new Date(); horizon.setDate(horizon.getDate() + state.jours);
-  let n = 0;
+  const byClub = new Map();
   for (const t of DATA.tournois) {
     if (new Date(t.date_debut) > horizon) continue;
     const eps = matchingEpreuves(t);
     if (!eps.length) continue;
     const m = minutesForMode(t);
     if (state.tmax < 150 && (m == null || m > state.tmax)) continue;
-    n++;
-    L.circleMarker([t.club.lat, t.club.lng], {
-      radius: 8, color: '#fff', weight: 2, fillColor: colorFor(m), fillOpacity: 1
-    }).bindPopup(popupHtml(t, eps, m))
-      .bindTooltip(`${t.libelle} — ${fmt(m)}`)
+    const key = t.club.code || `${t.club.lat},${t.club.lng}`;
+    if (!byClub.has(key)) byClub.set(key, { club: t.club, m, t0: t, items: [] });
+    byClub.get(key).items.push({ t, eps });
+  }
+  let n = 0;
+  for (const g of byClub.values()) {
+    g.items.sort((a, b) => a.t.date_debut < b.t.date_debut ? -1 : 1);
+    n += g.items.length;
+    L.circleMarker([g.club.lat, g.club.lng], {
+      radius: g.items.length > 1 ? 10 : 8, color: '#fff', weight: 2, fillColor: colorFor(g.m), fillOpacity: 1
+    }).bindPopup(clubPopupHtml(g.club, g.items, g.t0), { maxHeight: 340 })
+      .bindTooltip(g.items.length > 1
+        ? `${g.club.libelle} — ${g.items.length} tournois · ${fmt(g.m)}`
+        : `${g.items[0].t.libelle} — ${fmt(g.m)}`)
       .addTo(markerLayer);
   }
   document.getElementById('count').textContent = n;

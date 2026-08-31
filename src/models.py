@@ -43,6 +43,7 @@ class Epreuve:
     nature: str = ""              # SM, SD, DM, DD, DX
     sexe: str = ""               # H, F, mixte
     double: bool = False
+    format: str = "standard"     # "standard" (tableau) ou "mc" (Tournoi Multi-Chances)
     categorie_age: str = ""      # "Senior", "35 ans", "13/14 ans"…
     id_categorie_age: Optional[int] = None
     classement_min: str = ""     # libellé ("NC", "30/1")

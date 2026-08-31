@@ -79,6 +79,7 @@ def _epreuves(hom_id: int, client: TenUpClient) -> list[Epreuve]:
                 nature=_nature(e),
                 sexe="mixte" if e.get("mixte") else ("F" if e.get("dames") else "H"),
                 double=bool(e.get("double")),
+                format="mc" if (e.get("type") or "").upper() == "MULTICHANCE" else "standard",
                 categorie_age=e.get("libelleCategorieAge", "") or "",
                 id_categorie_age=e.get("idCategorieAge"),
                 classement_min=cmin,
