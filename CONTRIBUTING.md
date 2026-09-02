@@ -1,6 +1,6 @@
 # Guide de contribution
 
-Merci de votre intérêt pour contribuer à TenUp Parser !
+Merci de votre intérêt pour contribuer à Tedata Tennis !
 
 ## Avant de commencer
 
@@ -13,8 +13,8 @@ Merci de votre intérêt pour contribuer à TenUp Parser !
 ### 1. Fork et cloner
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/TenUp_Parser.git
-cd TenUp_Parser
+git clone https://github.com/YOUR_USERNAME/tedata-tennis.git
+cd tedata-tennis
 ```
 
 ### 2. Créer une branche

@@ -1,8 +1,8 @@
-# Architecture de TenUp Parser
+# Architecture de Tedata Tennis
 
 ## Vue d'ensemble
 
-TenUp Parser est organisé selon une architecture modulaire avec séparation des responsabilités.
+Tedata Tennis est organisé selon une architecture modulaire avec séparation des responsabilités.
 
 ## Modules principaux
 

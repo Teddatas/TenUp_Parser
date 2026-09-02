@@ -1,6 +1,8 @@
-# 🎾 TenUp Parser
+# 🎾 Tedata Tennis
 
-Parser de tournois de tennis depuis PDF vers CSV
+Parser de tournois de tennis depuis PDF vers CSV (anciennement `TenUp_Parser`,
+renommé le 2026-09-02 pour matcher la convention `tedata-*` du reste de
+l'écosystème Tedata).
 
 ## Description
 
@@ -24,7 +26,7 @@ Ce projet automatise l'extraction des informations de tournois de tennis à part
 ## Structure du projet
 
 ```
-TenUp_Parser/
+tedata-tennis/
 ├── src/                      # Code source principal
 │   ├── __init__.py
 │   ├── config.py             # Configuration et chemins
@@ -57,8 +59,8 @@ TenUp_Parser/
 
 1. **Cloner le repository**
    ```bash
-   git clone https://github.com/Teddatas/TenUp_Parser.git
-   cd TenUp_Parser
+   git clone https://github.com/Teddatas/tedata-tennis.git
+   cd tedata-tennis
    ```
 
 2. **Créer un environnement virtuel** (recommandé)
@@ -182,7 +184,7 @@ Modifiez `src/config.py` pour :
 
 Les logs sont enregistrés dans :
 - Console : affichage en temps réel
-- Fichier : `logs/tenup_parser.log`
+- Fichier : `logs/tedata-tennis.log`
 
 Niveau de log configurable via `src/config.py`
 

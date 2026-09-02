@@ -31,7 +31,7 @@ def setup_logger(name: str) -> logging.Logger:
     
     # Handler fichier
     file_handler = logging.FileHandler(
-        LOGS_DIR / "tenup_parser.log",
+        LOGS_DIR / "tedata-tennis.log",
         encoding="utf-8"
     )
     file_handler.setLevel(LOG_LEVEL)
